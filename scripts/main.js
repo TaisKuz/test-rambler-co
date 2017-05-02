@@ -1,5 +1,4 @@
 import '../styles/main.styl';
-import $ from 'jquery';
 import 'react-photoswipe/lib/photoswipe.css';
 import {PhotoSwipeGallery} from 'react-photoswipe';
 
@@ -16,95 +15,95 @@ let MainPage = React.createClass({
   },
 
   getItems(){
-    //make request to API and render when all of items are ready
-
     var mainthis = this,
       section = 'hot',
       sort = 'viral',
       page = 0,
       clientID = '492ea79b2461632',
-      galleryItems = []; //Here there will be pictures
+      galleryItems = [],// здесь будут объекты для PhotoSwipeGallery
+      albums = [],      // здесь будут id всех альбомомв галереи
+      albumIndex = [],  // здесь будут link всех картинок галереи
+      imgs = [],        // здесь будут все indexes, указывающие на исходное место альбомаов в галереи
+      imgIndex = [];    // здесь будут все indexes, указывающие на исходное место картинок в галереи
 
     //Make a request to the gallery
-    $.ajax({
-      url: `https://api.imgur.com/3/gallery/${section}/${sort}/${page}`,
-      dataType: 'json',
-      type: 'GET',
-      headers: {
-        Authorization: `Client-ID ${clientID}`,
-        Accept: 'application/json'
-      },
+    //пока выполняется запрос можно добавить прелоадер (но не стала)
+    fetch(`https://api.imgur.com/3/gallery/${section}/${sort}/${page}`,
+      {
+        dataType: 'json',
+        type: 'GET',
+        headers: {
+          Authorization: `Client-ID ${clientID}`,
+          Accept: 'application/json'
+        }
+      })
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        for(let i=0; i < data.data.length; i++){
+          let item = data.data[i];
 
-      success: function(data){
+          if (item.is_album) {
 
-        galleryItems = data.data.map((item, index) => {
+            albums.push(item.id); // собираем id всех альбомов галереи в отдельный массив
+            albumIndex.push(i);   // запоминаем индексы альбомов, т.е. где они были в галерее
 
-          var objItem = {}; //Object with a description of the picture for PhotoSwipeGallery
-
-          //If this is an album we make ajax request for the first picture from the album
-          if (item.is_album === true) {
-            // but it is ready too late
-            // and I faild to do ajax request with promise
-            // How can it be fixed?
-            objItem = getImgFromAlbum(item.id)
-              .then(
-                (response) => {
-                  return response;
-                },
-                error => console.log(`Rejected: ${error}`)
-              );
           }
-          else if (item.is_album === false) {
+          else if (!item.is_album) {
 
-              objItem =
-              {
-                src: item.link,
-                thumbnail: item.link,
-                w: 1200,
-                h: 900,
-                title: item.title
-              };
+            imgs.push(item.link); // собираем ссылки всех картинок галереи в отдельный массив
+            imgIndex.push(i);     // запоминаем индексы картинок, т.е. где они были в галерее
           }
+        }
 
-            return(objItem);
-         });
+        for(let i=0; i < imgs.length; i++){
+          //заполняем галерею картинками в том порядке,
+          // в котором они были в галерее на igmur
+          galleryItems[ imgIndex[i] ] = {
+            src: imgs[i],
+            thumbnail: imgs[i],
+            w: 1200,
+            h: 900,
+            title: ''
+          };
 
-        // ajax request with promise
-        function getImgFromAlbum(itemId) {
+        }
 
-          return new Promise(function(resolve, reject) {
-            $.ajax({
-              url: `https://api.imgur.com/3/gallery/album/${itemId}`,
+        for(let i=0; i < albums.length; i++){
+          fetch(`https://api.imgur.com/3/gallery/album/${albums[i]}`,
+            {
               dataType: 'json',
               type: 'GET',
               headers: {
                 Authorization: `Client-ID ${clientID}`,
                 Accept: 'application/json'
-              },
-            }).done(function(data) {
-
-              resolve({
+              }
+            })
+            .then(function(response) {
+              return response.json();
+            })
+            .then(function(data) {
+              //заполняем галерею первой картинкой из альбома в том порядке,
+              //в котором альбомы были в галерее на igmur
+              galleryItems[ albumIndex[i] ] = {
                 src: data.data.images[0].link,
                 thumbnail: data.data.images[0].link,
                 w: 1200,
                 h: 900,
                 title: ''
-              });
-            }).fail(function(error) {
+              };
 
-              reject(error);
-            });
-          });
+              if(i == albums.length - 1) {
+                //когда добрались до последнего альбома, то рендрим всю галерею
+                //т.к. картинки в нее уже собраны
+                mainthis.setState({galleryItems: galleryItems});
+              }
+            })
+            .catch( alert );
         }
-
-        //set state and re render when items are ready
-        // but it is ready too early
-        mainthis.setState({galleryItems: galleryItems});
-      },
-      error: function(data){
-        console.log('error', data);
-      }
-    });
+      })
+      .catch( alert );
   },
 
   getThumbnailContent(item) {
@@ -120,8 +119,8 @@ let MainPage = React.createClass({
       <div className="main">
         <div className="main-contentWrapper">
 
-        <PhotoSwipeGallery items={this.state.galleryItems}
-                           thumbnailContent={this.getThumbnailContent}/>
+          <PhotoSwipeGallery items={this.state.galleryItems}
+                             thumbnailContent={this.getThumbnailContent}/>
         </div>
       </div>
     );

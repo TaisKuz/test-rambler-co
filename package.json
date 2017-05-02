@@ -5,7 +5,7 @@
   "scripts": {
     "webpack": "webpack && webpack-dev-server",
     "watch": "webpack --watch",
-    "server": "python -m SimpleHTTPServer 8008"
+    "server": "node server.js"
   },
   "author": "taiska",
   "license": "ISC",
@@ -18,8 +18,8 @@
     "babel-preset-react": "^6.16.0",
     "css-loader": "^0.25.0",
     "fetch-jsonp": "^1.0.6",
-    "jquery": "^3.2.1",
     "lodash": "^4.17.4",
+    "node-static": "^0.7.9",
     "promise-polyfill": "^6.0.2",
     "react": "^15.3.2",
     "react-dom": "^15.3.2",
